@@ -1,0 +1,11 @@
+# Terraform
+.terraform/
+terraform.tfstate*
+# Node modules
+app/backend/node_modules/
+app/frontend/node_modules/
+# Cloud Function artifacts
+app/functions/node_modules/
+# Any editor files
+.vscode/
+*.swp

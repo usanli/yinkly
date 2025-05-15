@@ -1,30 +1,125 @@
 <!DOCTYPE html>
-<html>
-  <head><title>Yinkly Admin UI</title></head>
-  <body>
-    <h1>Yinkly Admin UI</h1>
-    <form id="form">
-      <input id="longUrl" placeholder="Paste long URL…" style="width:400px" />
-      <button>Shorten</button>
-    </form>
-    <pre id="result"></pre>
-    <script>
-      const form = document.querySelector('#form');
-      form.onsubmit = async e => {
-        e.preventDefault();
-        const url = document.querySelector('#longUrl').value;
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Yinkly URL Shortener</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    #form {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    #longUrl {
+      width: 400px;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+    #result-box {
+      display: none;
+      background: #fff;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    #result-box a {
+      color: #007bff;
+      text-decoration: none;
+      word-break: break-all;
+    }
+    #result-box.no-copy {
+      justify-content: center;
+    }
+    #result-box.no-copy a {
+      width: 100%;
+      text-align: center;
+    }
+    #error {
+      color: #c00;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Yinkly URL Shortener</h1>
+  <form id="form">
+    <input id="longUrl" placeholder="Paste your long URL here…" required />
+    <button type="submit">Shorten</button>
+  </form>
+
+  <div id="result-box">
+    <a id="shortLink" href="#" target="_blank" rel="noopener"></a>
+  </div>
+  <div id="error"></div>
+
+  <script>
+    const form = document.getElementById('form');
+    const longUrlInput = document.getElementById('longUrl');
+    const resultBox = document.getElementById('result-box');
+    const shortLink = document.getElementById('shortLink');
+    const errorDiv = document.getElementById('error');
+
+    form.onsubmit = async e => {
+      e.preventDefault();
+      errorDiv.textContent = '';
+      resultBox.style.display = 'none';
+
+      const longUrl = longUrlInput.value.trim();
+      if (!longUrl) return;
+
+      try {
         const resp = await fetch(`${window.location.origin}/create`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url }),
+          body: JSON.stringify({ url: longUrl }),
         });
+
         if (!resp.ok) {
-          document.querySelector('#result').textContent = `Error: ${resp.status}`;
-          return;
+          throw new Error(`Server returned ${resp.status}`);
         }
+
         const { shortUrl } = await resp.json();
-        document.querySelector('#result').textContent = shortUrl;
-      };
-    </script>
-  </body>
+        shortLink.href = shortUrl;
+        shortLink.textContent = shortUrl;
+        resultBox.style.display = 'flex';
+        resultBox.classList.add('no-copy');
+      } catch (err) {
+        errorDiv.textContent = `Error: ${err.message}`;
+      }
+    };
+  </script>
+</body>
 </html>

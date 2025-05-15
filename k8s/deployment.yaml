@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yinkly-admin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: yinkly-admin
+  template:
+    metadata:
+      labels:
+        app: yinkly-admin
+    spec:
+      containers:
+      - name: yinkly-admin
+        image: gcr.io/plucky-dryad-459912-e4/yinkly-admin:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: yinkly-config
+              key: DB_HOST
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: yinkly-config
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-creds
+              key: DB_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: yinkly-config
+              key: DB_NAME
+        - name: REDIRECT_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: yinkly-config
+              key: REDIRECT_BASE_URL

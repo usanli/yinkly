@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
-  <head><title>Yinkly Admin</title></head>
+  <head><title>Yinkly Admin UI</title></head>
   <body>
     <h1>Yinkly Admin UI</h1>
     <form id="form">
-      <input id="longUrl" placeholder="Paste long URL…" style="width:300px"/>
+      <input id="longUrl" placeholder="Paste long URL…" style="width:400px" />
       <button>Shorten</button>
     </form>
     <pre id="result"></pre>
@@ -12,13 +12,17 @@
       const form = document.querySelector('#form');
       form.onsubmit = async e => {
         e.preventDefault();
-        const longUrl = document.querySelector('#longUrl').value;
-        const resp = await fetch('/api/create', {
+        const url = document.querySelector('#longUrl').value;
+        const resp = await fetch(`${window.location.origin}/create`, {
           method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({url: longUrl})
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
         });
-        const {shortUrl} = await resp.json();
+        if (!resp.ok) {
+          document.querySelector('#result').textContent = `Error: ${resp.status}`;
+          return;
+        }
+        const { shortUrl } = await resp.json();
         document.querySelector('#result').textContent = shortUrl;
       };
     </script>

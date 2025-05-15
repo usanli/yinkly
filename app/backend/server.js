@@ -1,45 +1,63 @@
 const express = require('express');
 const path = require('path');
-const app = express();
-
+const bodyParser = require('body-parser');
 const { Pool } = require('pg');
 
+const {
+  DB_HOST,
+  DB_PORT,
+  DB_USER,
+  DB_PASSWORD,
+  DB_NAME,
+  REDIRECT_BASE_URL,
+  PORT
+} = process.env;
+
+if (!DB_HOST || !DB_USER || !DB_PASSWORD || !DB_NAME || !REDIRECT_BASE_URL) {
+  console.error('Missing one of: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, REDIRECT_BASE_URL');
+  process.exit(1);
+}
+
 const pool = new Pool({
-  host:     process.env.DB_HOST,
-  user:     process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: DB_HOST,
+  port: DB_PORT || 5432,
+  user: DB_USER,
+  password: DB_PASSWORD,
+  database: DB_NAME,
 });
 
+const app = express();
+app.use(bodyParser.json());
 
-app.use(express.json());
+// serve static index.html + JS/CSS under `/`
+app.use(express.static(path.join(__dirname, 'frontend')));
 
-// 1) serve your static UI
-const front = path.join(__dirname, 'frontend');
-app.use(express.static(front));
-app.get('/', (req, res) => {
-  res.sendFile(path.join(front, 'index.html'));
-});
+// create endpoint
+app.post('/create', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'url is required' });
 
-// 2) your API endpoint
-app.post('/api/create', async (req, res) => {
-  const { url: longUrl } = req.body;
-  if (!longUrl) return res.status(400).json({ error: 'Missing url' });
-
-  // Generate a short code (e.g. base62 of timestamp/random)
-  const code = Math.random().toString(36).substring(2,8);
+  // generate 6-char code
+  const code = Math.random().toString(36).substr(2, 6);
 
   try {
     await pool.query(
-      'INSERT INTO urls(code,long_url) VALUES($1,$2)',
-      [code, longUrl]
+      `INSERT INTO urls (code, long_url) VALUES ($1, $2)`,
+      [code, url]
     );
-    const shortUrl = `${process.env.REDIRECT_BASE_URL}/${code}`;
-    res.json({ shortCode: code, shortUrl });
+    return res.json({
+      shortUrl: `${REDIRECT_BASE_URL}/${code}`
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'DB error' });
+    return res.status(500).json({ error: 'db error' });
   }
 });
 
-app.listen(80, () => console.log('Yinkly admin listening on port 80'));
+// everything else 404
+app.use((_, res) => res.status(404).send('Not found'));
+
+const port = PORT || 8080;
+app.listen(port, () => {
+  console.log(`Yinkly admin listening on port ${port}`);
+});

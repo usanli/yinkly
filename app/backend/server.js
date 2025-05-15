@@ -42,9 +42,9 @@ app.post('/create', async (req, res) => {
 
   try {
     await pool.query(
-      `INSERT INTO urls (code, long_url) VALUES ($1, $2)`,
+      'INSERT INTO urls (shortcode, url) VALUES ($1, $2) RETURNING shortcode',
       [code, url]
-    );
+    );    
     return res.json({
       shortUrl: `${REDIRECT_BASE_URL}/${code}`
     });

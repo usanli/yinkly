@@ -37,12 +37,13 @@ module "gke" {
   node_type  = var.node_machine_type
 }
 
- module "fn" {
-   source       = "./modules/fn"
-   name         = "yinkly-redirect"
-   runtime      = "nodejs18"
-   entry_point  = "handleRedirect"
-   trigger_http = true
-   project_id   = var.project_id
-   region       = var.region
- }
+module "fn" {
+  source       = "./modules/fn"
+  name         = "yinkly-redirect"
+  runtime      = var.fn_runtime
+  entry_point  = var.entry_point
+  trigger_http = true
+  project_id   = var.project_id
+  region       = var.fn_region
+}
+

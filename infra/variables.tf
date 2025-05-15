@@ -30,3 +30,21 @@ variable "node_machine_type" {
   type        = string
   default     = "e2-small"
 }
+
+variable "entry_point" {
+  description = "Name of the exported function in index.js"
+  type        = string
+  default     = "yinklyRedirect"  
+}
+
+variable "fn_runtime" {
+  description = "Cloud Function runtime"
+  type        = string
+  default     = "nodejs20"
+}
+
+variable "fn_region" {
+  description = "Region for Cloud Function"
+  type        = string
+  default     = "europe-west1"
+}

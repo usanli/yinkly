@@ -15,7 +15,13 @@
       padding: 2rem;
     }
     h1 {
-      margin-bottom: 1rem;
+      margin-bottom: 0.2rem;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 1rem;
+      color: #666;
+      font-style: italic;
     }
     #form {
       display: flex;
@@ -54,18 +60,18 @@
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
+      flex-direction: column;
     }
     #result-box a {
       color: #007bff;
       text-decoration: none;
       word-break: break-all;
+      font-weight: bold;
     }
-    #result-box.no-copy {
-      justify-content: center;
-    }
-    #result-box.no-copy a {
-      width: 100%;
-      text-align: center;
+    #note {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: #999;
     }
     #error {
       color: #c00;
@@ -75,13 +81,16 @@
 </head>
 <body>
   <h1>Yinkly URL Shortener</h1>
+  <h2>A (mostly) URL-lengthener | SWE590 project by Umut Şanlı</h2>
+
   <form id="form">
     <input id="longUrl" placeholder="Paste your long URL here…" required />
-    <button type="submit">Shorten</button>
+    <button type="submit">Shorten (or lengthen!)</button>
   </form>
 
   <div id="result-box">
     <a id="shortLink" href="#" target="_blank" rel="noopener"></a>
+    <div id="note">⚠️ Honestly, Yinkly tends to make URLs longer. It’s art, not efficiency.</div>
   </div>
   <div id="error"></div>
 
@@ -90,6 +99,7 @@
     const longUrlInput = document.getElementById('longUrl');
     const resultBox = document.getElementById('result-box');
     const shortLink = document.getElementById('shortLink');
+    const note = document.getElementById('note');
     const errorDiv = document.getElementById('error');
 
     form.onsubmit = async e => {
@@ -114,8 +124,8 @@
         const { shortUrl } = await resp.json();
         shortLink.href = shortUrl;
         shortLink.textContent = shortUrl;
+        note.textContent = '⚠️ Honestly, Yinkly tends to make URLs longer. It’s art, not efficiency.';
         resultBox.style.display = 'flex';
-        resultBox.classList.add('no-copy');
       } catch (err) {
         errorDiv.textContent = `Error: ${err.message}`;
       }

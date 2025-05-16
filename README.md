@@ -7,6 +7,10 @@ A GCP-based URL shortener split across:
 * **Cloud Function** for high-performance redirects
 * **Terraform** under `infra/` to provision everything with one command
 
+## Service Endpoint
+
+Your Yinkly service is live at: **[http://34.76.62.241/](http://34.76.62.241/)**
+
 ## Prerequisites
 
 * [gcloud CLI](https://cloud.google.com/sdk/docs/install) installed & authenticated
@@ -17,100 +21,121 @@ A GCP-based URL shortener split across:
 
 ## Deployment
 
-1. **Clone the repo**
+### 1. Clone the repo
 
-   ```bash
-   git clone https://github.com/usanli/yinkly.git
-   cd yinkly
-   ```
+```bash
+git clone https://github.com/usanli/yinkly.git
+cd yinkly
+```
 
-2. **Provision infra with Terraform**
+### 2. Provision infra with Terraform
 
-   ```bash
-   cd infra
-   terraform init
-   terraform apply -auto-approve
-   ```
+```bash
+cd infra
+terraform init
+terraform apply -auto-approve
+```
 
-   This will create:
+This will create:
 
-   * A Compute Engine VM running PostgreSQL
-   * A GKE cluster (with node pool)
-   * A serverless Cloud Function for redirects
+* A Compute Engine VM running PostgreSQL
+* A GKE cluster (with node pool)
+* A serverless Cloud Function for redirects
 
-3. **Build & push the admin UI image**
+### 3. Build & push the admin UI image
 
-   ```bash
-   cd ../app/backend
-   docker build -f Dockerfile -t gcr.io/$GOOGLE_CLOUD_PROJECT/yinkly-admin:latest .
-   docker push gcr.io/$GOOGLE_CLOUD_PROJECT/yinkly-admin:latest
-   ```
+```bash
+cd ../app/backend
+docker build -f Dockerfile -t gcr.io/$GOOGLE_CLOUD_PROJECT/yinkly-admin:latest .
+docker push gcr.io/$GOOGLE_CLOUD_PROJECT/yinkly-admin:latest
+```
 
-4. **Deploy to Kubernetes**
+### 4. Deploy to Kubernetes
 
-   ```bash
-   cd ../../k8s
-   kubectl apply -f deployment.yaml
-   kubectl apply -f service.yaml
-   ```
+```bash
+cd ../../k8s
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+```
 
-5. **Verify everything is running**
+#### Horizontal Pod Autoscaling
 
-   ```bash
-   # Wait for pods
-   kubectl rollout status deployment/yinkly-admin
+The GKE service is configured to scale between **1 and 10 pods** based on average CPU utilization (target: 50%). You can customize these limits in `k8s/hpa.yaml`.
 
-   # Get the LoadBalancer IP
-   kubectl get svc yinkly-admin
-   ```
+### 5. Verify everything is running
 
-   Visit the external IP on port 80 to use the Yinkly UI.
+```bash
+# Wait for pods to be ready
+kubectl rollout status deployment/yinkly-admin
 
-6. **Deploy (or redeploy) Cloud Function**
-   If not already done by Terraform, from the repo root:
+# Get the LoadBalancer IP
+echo "http://$(kubectl get svc yinkly-admin -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/"
+```
 
-   ```bash
-   gcloud functions deploy yinkly-redirect \
-     --region $GOOGLE_CLOUD_REGION \
-     --runtime nodejs20 \
-     --trigger-http \
-     --allow-unauthenticated \
-     --entry-point handleRedirect \
-     --set-env-vars DB_HOST=<VM_IP>,DB_PORT=5432,DB_USER=shortener,DB_PASSWORD=<pw>,DB_NAME=yinklydb
-   ```
+Visit the external IP on port 80 (e.g. [http://34.76.62.241/](http://34.76.62.241/)) to use the Yinkly UI.
 
-## Load Testing
+### 6. Deploy (or redeploy) Cloud Function
+
+If not already done by Terraform, from the repo root:
+
+```bash
+gcloud functions deploy yinkly-redirect \
+  --region $GOOGLE_CLOUD_REGION \
+  --runtime nodejs20 \
+  --trigger-http \
+  --allow-unauthenticated \
+  --entry-point handleRedirect \
+  --set-env-vars DB_HOST=<VM_IP>,DB_PORT=5432,DB_USER=shortener,DB_PASSWORD=<pw>,DB_NAME=yinklydb
+```
+
+## Load Testing with Locust
 
 Inside the repo root:
 
 ```bash
-locust -f locustfile.py --host http://<YOUR_LB_IP>
+locust -f locustfile.py --host http://34.76.62.241/
 ```
 
-Point your browser to `http://localhost:8089` to start the test and watch your HPA scale pods.
+Point your browser to `http://localhost:8089` to start the test, then monitor:
+
+* The **Locust** dashboard for request rates and response times
+* The **GKE HorizontalPodAutoscaler** via:
+
+  ```bash
+  kubectl get hpa yinkly-admin -n default
+  kubectl describe hpa yinkly-admin -n default
+  ```
+* The **pod count** with:
+
+  ```bash
+  kubectl get pods -l app=yinkly-admin -n default
+  ```
+
+This setup allows your service to handle bursts of traffic by scaling up to 10 replicas automatically.
 
 ## Teardown
 
-When you’re done, you can tear everything down in one go:
+When you’re done, tear everything down:
 
 1. **Delete Kubernetes resources**
 
    ```bash
    kubectl delete -f k8s/deployment.yaml
    kubectl delete -f k8s/service.yaml
+   kubectl delete -f k8s/hpa.yaml
    ```
 
-2. **Destroy the Terraform-managed infra**
+2. **Destroy Terraform-managed infra**
 
    ```bash
    cd infra
    terraform destroy -auto-approve
    ```
 
-3. **(Optional) Delete the image**
+3. **(Optional) Delete the Docker image**
 
    ```bash
    gcloud container images delete gcr.io/$GOOGLE_CLOUD_PROJECT/yinkly-admin:latest --quiet
    ```
 
-This will remove your VM, GKE cluster, and Cloud Function, leaving no active resources behind.
+This will remove your VM, GKE cluster, HPA, and Cloud Function, leaving no active resources behind.
